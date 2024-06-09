@@ -1,8 +1,8 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import joblib
-import numpy as np
+import pandas as pd
 
 app = FastAPI()
 
@@ -36,7 +36,8 @@ class PredictionRequest(BaseModel):
     howManyNewClothesMonthly: float
     howLongInternetDailyHour: float
 
-model = joblib.load('best_gradient_boosting_model.pkl')
+# Load the trained pipeline
+pipeline = joblib.load('carbon_emission_pipeline.pkl')
 
 @app.get("/")
 def read_root():
@@ -44,27 +45,29 @@ def read_root():
 
 @app.post("/predict")
 async def predict(request: PredictionRequest):
-    input_data = np.array([
-        request.bodyType,
-        request.sex,
-        request.diet,
-        request.howOftenShower,
-        request.heatingEnergySource,
-        request.transport,
-        request.vehicleType,
-        request.socialActivity,
-        request.frequencyOfTravelingByAir,
-        request.wasteBagSize,
-        request.energyEfficiency,
-        request.monthlyGroceryBill,
-        request.vehicleMonthlyDistanceKm,
-        request.wasteBagWeeklyCount,
-        request.howLongTVPCDailyHour,
-        request.howManyNewClothesMonthly,
-        request.howLongInternetDailyHour
-    ]).reshape(1, -1)
-    
-    prediction = model.predict(input_data)
+    # Convert input data to DataFrame
+    input_data = pd.DataFrame([{
+        "Body Type": request.bodyType,
+        "Sex": request.sex,
+        "Diet": request.diet,
+        "How Often Shower": request.howOftenShower,
+        "Heating Energy Source": request.heatingEnergySource,
+        "Transport": request.transport,
+        "Vehicle Type": request.vehicleType,
+        "Social Activity": request.socialActivity,
+        "Frequency of Traveling by Air": request.frequencyOfTravelingByAir,
+        "Waste Bag Size": request.wasteBagSize,
+        "Energy efficiency": request.energyEfficiency,
+        "Monthly Grocery Bill": request.monthlyGroceryBill,
+        "Vehicle Monthly Distance Km": request.vehicleMonthlyDistanceKm,
+        "Waste Bag Weekly Count": request.wasteBagWeeklyCount,
+        "How Long TV PC Daily Hour": request.howLongTVPCDailyHour,
+        "How Many New Clothes Monthly": request.howManyNewClothesMonthly,
+        "How Long Internet Daily Hour": request.howLongInternetDailyHour
+    }])
+    print(input_data.head())
+    # Make prediction
+    prediction = pipeline.predict(input_data)
     return {"predictedEmission": prediction[0]}
 
 if __name__ == '__main__':
